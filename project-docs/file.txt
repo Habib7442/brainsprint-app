@@ -1,0 +1,1 @@
+before homescreen i need to setup the google login ok also i need to create a table ok to save user after signup for the first time ok also in table initially all user will be on free tier. I will use supabase google auth for login ok.
