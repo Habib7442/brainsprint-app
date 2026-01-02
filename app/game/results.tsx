@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Share, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Share, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
@@ -15,6 +15,8 @@ export default function ResultsScreen() {
   const { user, profile, refreshProfile } = useAuthStore();
   const { startGame, questionsAnswered, correctAnswers, startTime } = useGameStore(); // Get stats
   
+  const [isSaving, setIsSaving] = useState(true); // Internal loading state
+
   const finalScore = parseInt(score as string, 10) || 0;
   const xpEarned = Math.floor(finalScore / 10); // 10% of score is XP
 
@@ -23,7 +25,10 @@ export default function ResultsScreen() {
   }, []);
 
   const saveResults = async () => {
-    if (!user) return;
+    if (!user) {
+        setIsSaving(false);
+        return;
+    }
 
     // Calculate details
     const totalTimeSeconds = Math.floor((Date.now() - startTime) / 1000); 
@@ -35,30 +40,42 @@ export default function ResultsScreen() {
        : 0;
 
     try {
-      // 1. Update User Stats (XP)
+      // 1. Update User Stats (XP) - Keeping this for Profile Sync if needed, 
+      // though Leaderboard now tracks XP from sessions independently.
       await supabase.rpc('increment_xp', { 
         amount: xpEarned, 
         user_uuid: user.id 
       });
 
-      // 2. Insert Match Record
-      const { error: matchError } = await supabase
-        .from('matches')
+      // 2. Insert Session Record (Triggers Leaderboard & Stats updates)
+      const category = mode === 'reasoning' ? 'reasoning' : 'quantitative'; // logical vs quantitative
+      const subType = typeof mode === 'string' ? mode : 'practice';
+
+      const { error: sessionError } = await supabase
+        .from('user_sessions')
         .insert({
           user_id: user.id,
-          game_mode: mode as string,
-          score: finalScore,
-          total_time: totalTimeSeconds, 
-          questions_answered: questionsAnswered,
-          accuracy: accuracy, 
-          avg_time_per_question: avgTime
+          category: category,
+          sub_type: subType, // e.g. 'calculation', 'puzzle'
+          session_type: 'practice',
+          correct_answers: correctAnswers,
+          total_questions: questionsAnswered,
+          xp_earned: xpEarned,
+          duration_minutes: Math.ceil(totalTimeSeconds / 60) || 1,
+          metadata: {
+             accuracy: accuracy,
+             avg_time: avgTime
+          }
         });
 
-      if (matchError) console.error('Match insert error:', matchError);
+      if (sessionError) console.error('Session insert error:', sessionError);
+      
       await refreshProfile();
       
     } catch (e) {
       console.error('Error saving results:', e);
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -96,6 +113,15 @@ export default function ResultsScreen() {
     router.dismissAll();
     router.replace('/(tabs)');
   };
+
+  if (isSaving) {
+      return (
+        <View className="flex-1 bg-gray-900 justify-center items-center">
+            <ActivityIndicator size="large" color="#FF6B58" />
+            <Text className="text-white mt-4 font-rubik">Saving your victory...</Text>
+        </View>
+      );
+  }
 
   return (
     <View className="flex-1 bg-gray-900 justify-center items-center">

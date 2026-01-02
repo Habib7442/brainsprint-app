@@ -193,7 +193,7 @@ export default function HomeScreen() {
                     if (mode.id === 'calculation') {
                       router.push({ pathname: '/game/[id]', params: { id: 'calculation' } });
                     } else if (mode.id === 'reasoning') {
-                      router.push({ pathname: '/game/[id]', params: { id: 'reasoning' } });
+                      router.push('/game/reasoning');
                     } else if (mode.id === 'puzzle') {
                       router.push({ pathname: '/game/[id]', params: { id: 'puzzle' } });
                     } else {
