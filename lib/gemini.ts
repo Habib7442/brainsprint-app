@@ -16,15 +16,16 @@ export interface ReasoningQuestion {
 
 export const generateReasoningQuestions = async (
   topic: string = 'Coding-Decoding',
-  count: number = 20
+  count: number = 20,
+  pdfBase64?: string
 ): Promise<ReasoningQuestion[]> => {
   if (!apiKey) {
     throw new Error("EXPO_PUBLIC_GEMINI_API_KEY is not set");
   }
 
-  const prompt = `
+  let promptText = `
     Generate ${count} reasoning questions on the topic '${topic}' for competitive exams.
-    Target Level: **IBPS PO, RRB Assistant, SBI Clerk, RRB NTPC, RRB JE, SSC CHSL, SSC CGL, Bank PO, Bank Clerk, Bank SO**. 
+    Target Level: **SSC CGL, SSC CHSL, RRB JE, RRB NTPC** (Prioritize these patterns heavily), IBPS PO, SBI Clerk. 
     
     ## Guidelines:
     1. **High Quality**: Questions must be logical, tricky, and free of errors.
@@ -54,10 +55,47 @@ export const generateReasoningQuestions = async (
     ]
   `;
 
+  if (pdfBase64) {
+      promptText = `
+        Analyze the provided PDF document and generate ${count} multiple-choice questions (MCQs) based on its content.
+        Topic/Focus: ${topic || 'General Content of the Document'}.
+        
+        ## Guidelines:
+        1. **Strictly Document Based**: Questions must be answerable ONLY from the provided PDF content.
+        2. **Reasoning & Comprehension**: Focus on logic, inference, and data interpretation from the document.
+        3. **Format**: Same JSON schema as below.
+        
+        The output must closely follow this schema:
+        [
+          {
+            "id": "unique_string",
+            "question": "Question text here",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "correctAnswer": "The correct option string",
+            "explanation": "Reference the section/page of the PDF if possible. Explain the logic.",
+            "difficulty": "Easy" | "Medium" | "Hard",
+            "topic": "${topic}"
+          }
+        ]
+      `;
+  }
+
+  const contents = pdfBase64 
+    ? [
+        { text: promptText },
+        {
+            inlineData: {
+                mimeType: 'application/pdf',
+                data: pdfBase64
+            }
+        }
+      ]
+    : [{ text: promptText }]; // Wrap string in object for consistency or just pass string if API allows (API allows both, but object is safer for mixed content) -> Actually checking docs, contents is `Content[] | string`. If mixed, must be `Content[]`.
+
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview", // Using latest flash model for speed
-      contents: prompt,
+      model: "gemini-3-pro-preview", // Updated to model that definitely supports multimodality effectively
+      contents: contents as any, 
       config: {
         responseMimeType: "application/json",
         responseSchema: {

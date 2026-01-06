@@ -43,14 +43,15 @@ export default function RootLayout() {
     if (!initialized) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const segmentsArr = segments as string[];
+    const atRoot = segmentsArr.length === 0 || segmentsArr[0] === 'index';
     
     if (session && inAuthGroup) {
       // If user is signed in and trying to access auth pages, redirect to home
       router.replace('/(tabs)');
-    } else if (!session && !inAuthGroup) {
-      // If user is not signed in and trying to access app pages, redirect to welcome
-      // CHECK: Do we want to allow welcome screen? Yes.
-      // Ideally, the index route should be the welcome screen if not logged in.
+    } else if (!session && !inAuthGroup && !atRoot) {
+      // If user is not signed in and trying to access protected pages (not index/auth), redirect to welcome
+      router.replace('/');
     }
   }, [session, segments, initialized]);
 

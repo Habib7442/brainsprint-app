@@ -5,11 +5,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Dimensions, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSequence,
-    withTiming,
-    ZoomIn
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+  ZoomIn
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGameStore } from '../../store/useGameStore';
@@ -65,12 +65,39 @@ export default function GameScreen() {
     }
   }, [isPlaying, timeLeft, lives]);
 
-  // Shake animation style
+  /* Animation Styles defined at top-level to obey Rules of Hooks */
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateX: shake.value }],
     };
   });
+
+  const userProgressStyle = useAnimatedStyle(() => ({
+      width: withTiming(`${Math.min((score / 500) * 100, 100)}%`, { duration: 500 }),
+      height: '100%',
+      backgroundColor: '#10B981',
+      borderRadius: 999
+  }));
+
+  const userMarkerStyle = useAnimatedStyle(() => ({
+      left: withTiming(`${Math.min((score / 500) * 100, 92)}%`, { duration: 500 }),
+      position: 'absolute',
+      zIndex: 10
+  }));
+
+  const ghostProgressStyle = useAnimatedStyle(() => ({
+      width: withTiming(`${Math.min((ghostScore / 500) * 100, 100)}%`, { duration: 500 }),
+      height: '100%',
+      backgroundColor: '#EF4444', 
+      borderRadius: 999,
+      opacity: 0.8
+  }));
+
+  const ghostMarkerStyle = useAnimatedStyle(() => ({
+      left: withTiming(`${Math.min((ghostScore / 500) * 100, 94)}%`, { duration: 500 }),
+      position: 'absolute',
+      zIndex: 10
+  }));
 
   const handleAnswer = (option: number | string) => {
     const isCorrect = submitAnswer(option);
@@ -139,20 +166,11 @@ export default function GameScreen() {
                 <View className="flex-1 h-3 bg-gray-800 rounded-full relative justify-center">
                     {/* Progress Fill */}
                     <Animated.View 
-                        style={{ 
-                            width: `${Math.min((score / 500) * 100, 100)}%`, 
-                            height: '100%', 
-                            backgroundColor: '#10B981', 
-                            borderRadius: 999
-                        }} 
+                        style={userProgressStyle} 
                     />
                     {/* Avatar Marker */}
                     <Animated.View 
-                        style={{ 
-                            left: `${Math.min((score / 500) * 100, 92)}%`, 
-                            position: 'absolute',
-                            zIndex: 10
-                        }}
+                        style={userMarkerStyle}
                     >
                          <View className="w-5 h-5 bg-green-500 rounded-full border-2 border-white shadow-sm" />
                     </Animated.View>
@@ -167,21 +185,11 @@ export default function GameScreen() {
                 <View className="flex-1 h-3 bg-gray-800 rounded-full relative justify-center">
                      {/* Progress Fill */}
                      <Animated.View 
-                        style={{ 
-                            width: `${Math.min((ghostScore / 500) * 100, 100)}%`, 
-                            height: '100%', 
-                            backgroundColor: '#EF4444', 
-                            borderRadius: 999,
-                            opacity: 0.8
-                        }} 
+                        style={ghostProgressStyle} 
                     />
                     {/* Avatar Marker */}
                     <Animated.View 
-                        style={{ 
-                            left: `${Math.min((ghostScore / 500) * 100, 94)}%`, 
-                            position: 'absolute',
-                            zIndex: 10
-                        }}
+                        style={ghostMarkerStyle}
                     >
                         {ghostAvatar ? (
                              <Image 
